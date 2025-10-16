@@ -6,6 +6,8 @@ In this code are included two main files, the GUI.py file that creates and loads
 
 Two examples are also included, for quick testing. 
 
+To all our fellow students who might be inspired by the code, please don't, as it would only penalize both our groups, which, honestly, isn't quite nice.
+
 Have a lovely day, 
 OLAMPI Terry
 GARIMELLA Thribhuvan 
