@@ -1,103 +1,86 @@
-;; Extended Lunar Domain for Mission 3 (Part 2C)
-;; Adds astronauts, docking/control areas, and constraints for deploy/transmit actions.
-;; Compatible with planners: editor.planning.domains, Fast Downward, FF.
+;; lunar-extended-untyped.pddl
+;; Untyped STRIPS domain for Mission 3 (astronauts, docking/control)
+;; Use with the matching untyped problem file.
 
-(define (domain lunar-extended)
-  (:requirements :strips :typing)
-
-  (:types
-    rover lander astronaut location
-  )
+(define (domain lunar-extended-untyped)
+  (:requirements :strips)
 
   (:predicates
-    ;; --- Base world state ---
-    (rover-at ?r - rover ?l - location)
-    (lander-at ?ld - lander ?l - location)
-    (path ?l1 - location ?l2 - location)
-    (assigned ?r - rover ?ld - lander)
-    (deployed ?r - rover)
-    (memory-free ?r - rover)
-    (image-saved ?r - rover ?l - location)
-    (scan-saved ?r - rover ?l - location)
-    (sample-at ?l - location)
-    (has-sample ?r - rover)
-    (sample-stored ?ld - lander)
+    ;; base predicates
+    (rover-at ?r ?l)
+    (lander-at ?ld ?l)
+    (path ?l1 ?l2)
+    (assigned ?r ?ld)
+    (deployed ?r)
+    (memory-free ?r)
+    (image-saved ?r ?l)
+    (scan-saved ?r ?l)
+    (sample-at ?l)
+    (has-sample ?r)
+    (sample-stored ?ld)
 
-    ;; --- New predicates for the extension ---
-    (astronaut-at ?a - astronaut ?loc - location)
-    (docking ?loc - location)       ;; marks docking-bay areas
-    (control ?loc - location)       ;; marks control-room areas
+    ;; extension predicates
+    (astronaut-at ?a ?loc)
+    (docking ?loc)
+    (control ?loc)
   )
 
-  ;; ----------------------------------------------------------------------
-  ;; Standard actions (same as in base domain)
-  ;; ----------------------------------------------------------------------
-
+  ;; Rover moves along explicit path
   (:action move
-    :parameters (?r - rover ?from - location ?to - location)
+    :parameters (?r ?from ?to)
     :precondition (and (deployed ?r) (rover-at ?r ?from) (path ?from ?to))
     :effect (and (not (rover-at ?r ?from)) (rover-at ?r ?to))
   )
 
+  ;; Take image
   (:action take-image
-    :parameters (?r - rover ?loc - location)
+    :parameters (?r ?loc)
     :precondition (and (deployed ?r) (rover-at ?r ?loc) (memory-free ?r))
     :effect (and (image-saved ?r ?loc) (not (memory-free ?r)))
   )
 
+  ;; Take scan
   (:action take-scan
-    :parameters (?r - rover ?loc - location)
+    :parameters (?r ?loc)
     :precondition (and (deployed ?r) (rover-at ?r ?loc) (memory-free ?r))
     :effect (and (scan-saved ?r ?loc) (not (memory-free ?r)))
   )
 
+  ;; Collect a sample on the ground
   (:action collect-sample
-    :parameters (?r - rover ?loc - location)
+    :parameters (?r ?loc)
     :precondition (and (deployed ?r) (rover-at ?r ?loc) (sample-at ?loc) (not (has-sample ?r)))
     :effect (and (has-sample ?r) (not (sample-at ?loc)))
   )
 
+  ;; Store a sample at a lander location (rover and lander must be co-located)
   (:action store-sample
-    :parameters (?r - rover ?ld - lander ?loc - location)
+    :parameters (?r ?ld ?loc)
     :precondition (and (deployed ?r) (rover-at ?r ?loc) (lander-at ?ld ?loc) (has-sample ?r))
     :effect (and (sample-stored ?ld) (not (has-sample ?r)))
   )
 
-  ;; ----------------------------------------------------------------------
-  ;; Extended actions (astronaut-dependent)
-  ;; ----------------------------------------------------------------------
-
-  ;; Rover deployment requires astronaut in docking bay
+  ;; Deploy rover when astronaut present at docking bay
   (:action deploy-with-astronaut
-    :parameters (?r - rover ?ld - lander ?loc - location ?a - astronaut)
-    :precondition (and
-        (assigned ?r ?ld)
-        (lander-at ?ld ?loc)
-        (not (deployed ?r))
-        (astronaut-at ?a ?loc)
-        (docking ?loc)
-    )
+    :parameters (?r ?ld ?loc ?a)
+    :precondition (and (assigned ?r ?ld) (lander-at ?ld ?loc) (not (deployed ?r))
+                       (astronaut-at ?a ?loc) (docking ?loc))
     :effect (and (deployed ?r) (rover-at ?r ?loc))
   )
 
-  ;; Data transmission requires astronaut in control room
+  ;; Transmit data when astronaut present in control room (frees memory)
   (:action transmit-with-astronaut
-    :parameters (?r - rover ?ld - lander ?loc - location ?a - astronaut)
-    :precondition (and
-        (deployed ?r)
-        (rover-at ?r ?loc)
-        (lander-at ?ld ?loc)
-        (not (memory-free ?r))
-        (astronaut-at ?a ?loc)
-        (control ?loc)
-    )
+    :parameters (?r ?ld ?loc ?a)
+    :precondition (and (deployed ?r) (rover-at ?r ?loc) (lander-at ?ld ?loc)
+                       (not (memory-free ?r)) (astronaut-at ?a ?loc) (control ?loc))
     :effect (and (memory-free ?r))
   )
 
-  ;; Astronaut moves between docking bay and control room of same lander
+  ;; Astronaut moves along path edges (must follow path)
   (:action move-astronaut
-    :parameters (?a - astronaut ?from - location ?to - location)
-    :precondition (and (astronaut-at ?a ?from))
+    :parameters (?a ?from ?to)
+    :precondition (and (astronaut-at ?a ?from) (path ?from ?to))
     :effect (and (not (astronaut-at ?a ?from)) (astronaut-at ?a ?to))
   )
+
 )
