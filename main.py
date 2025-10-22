@@ -2,6 +2,7 @@ import csv
 import time
 
 class SudokuSolver:
+    
     def __init__(self):
         self.calls = 0
         self.backtracks = 0
